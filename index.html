@@ -6,7 +6,8 @@
     <title>Nokia Sokoban Mobile Optimized</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-
+        @media (min-width: 768px) { #phone-case { transform: scale(0.9) translateY(-30px); } }
+        
         :root {
             --bg-color: #9bbc0f;
             --fg-color: #0f380f;
@@ -131,20 +132,21 @@
             margin-top: 15px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px; /* Tăng khoảng cách nút */
+            gap: 12px; 
             width: 100%;
             max-width: 280px;
         }
 
         .key {
             background: #444; color: white; border: none; border-radius: 10px;
-            padding: 0; /* Xóa padding để canh giữa text dễ hơn */
-            font-family: sans-serif; font-size: 16px; font-weight: bold;
+            padding: 0;
+            font-family: sans-serif; font-size: 18px; font-weight: bold;
             box-shadow: 0 4px 0 #222; cursor: pointer; text-align: center;
-            height: 50px; /* Cao hơn để dễ bấm */
+            height: 55px; /* Tăng chiều cao */
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            touch-action: manipulation; /* Tối ưu cảm ứng */
+            touch-action: none; /* Quan trọng: Ngăn trình duyệt xử lý touch, giảm delay */
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         .key:active { transform: translateY(4px); box-shadow: 0 0 0 #222; background: #333; }
 
@@ -155,19 +157,30 @@
         }
 
         .d-btn {
-            width: 60px; height: 50px; /* Nút điều hướng to hơn */
-            background: #555; border-radius: 8px;
-            color: white; font-size: 24px; 
+            width: 65px; height: 60px; /* To hơn nữa cho dễ bấm */
+            background: #555; border-radius: 12px;
+            color: white; font-size: 28px; 
             display: flex; justify-content: center;
             align-items: center; 
             box-shadow: 0 4px 0 #333; 
             cursor: pointer;
-            touch-action: manipulation;
+            touch-action: none; /* Quan trọng: Loại bỏ delay 300ms và scroll */
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         .d-btn:active { transform: translateY(4px); box-shadow: none; background: #444; }
 
-        .instruction { margin-top: 10px; color: #666; font-size: 14px; text-align: center; max-width: 300px; }
+        .instruction {
+            position: absolute;
+            bottom: 5px;          /* cách đáy màn hình 20px */
+            left: 50%;
+            transform: translateX(-50%);
+            color: #9bbc0f;
+            font-size: 13px;
+            text-align: center;
+            white-space: nowrap;
+            z-index: 10;
+        }
         .scanlines {
             background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
             background-size: 100% 4px;
@@ -178,14 +191,15 @@
         /* Mobile Optimization Specifics */
         @media (max-width: 480px) {
             body {
-                padding: 10px 0;
-                justify-content: center; /* Canh giữa theo chiều dọc */
+                padding: 5px 0;
+                justify-content: center;
             }
             
             #phone-case {
-                padding: 15px 10px;
-                border-width: 2px; /* Giảm độ dày viền */
-                width: 98%;
+                padding: 10px 8px;
+                border-width: 2px;
+                width: 100%;
+                border-radius: 15px;
             }
 
             #nokia-logo {
@@ -193,7 +207,6 @@
                 margin-bottom: 5px;
             }
 
-            /* Thu nhỏ màn hình game một chút nếu điện thoại quá nhỏ */
             #screen-container {
                 width: 100%;
                 height: auto;
@@ -206,17 +219,14 @@
             }
 
             .d-btn {
-                width: 55px; /* Điều chỉnh cho vừa chiều ngang */
-                height: 55px; /* Tăng chiều cao để dễ bấm */
-                font-size: 28px;
+                width: 60px; 
+                height: 60px; /* Nút vuông vức dễ bấm */
             }
 
             .key {
                 height: 55px;
-                font-size: 18px;
             }
             
-            /* Ẩn hướng dẫn nếu màn hình quá ngắn */
             @media (max-height: 650px) {
                 .instruction { display: none; }
             }
@@ -239,41 +249,40 @@
             </div>
             <div id="pause-menu">
                 <h2>MENU</h2>
-                <p onclick="togglePause()">QUAY LAI (2)</p>
-                <p onclick="resetLevel()">CHOI LAI (1)</p>
-                <div style="margin-top:10px; font-size: 16px;">Dung mui ten trai/phai<br>de chon man</div>
+                <!-- Sử dụng onpointerdown để thống nhất sự kiện -->
+                <p onpointerdown="togglePause()">Tiếp Tục (2)</p>
+                <p onpointerdown="resetLevel()">Chơi lại (1)</p>
+               <!-- <div style="margin-top:10px; font-size: 16px;">ùng mũi tên trái/phải<br>để chọn màn</div> -->
             </div>
         </div>
 
         <div id="keypad">
-            <!-- D-Pad Layout optimized for thumbs -->
+            <!-- D-Pad Area -->
+            <!-- SỬ DỤNG onpointerdown thay cho ontouchstart/mousedown để tránh bị nhận đôi sự kiện -->
             <div class="d-pad-area">
-                <div class="d-btn" onmousedown="handleInput('ArrowLeft')" ontouchstart="handleInput('ArrowLeft', event)">◄</div>
+                <div class="d-btn" onpointerdown="handleInput('ArrowLeft', event)">◄</div>
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div class="d-btn" onmousedown="handleInput('ArrowUp')" ontouchstart="handleInput('ArrowUp', event)">▲</div>
-                    <div class="d-btn" onmousedown="handleInput('ArrowDown')" ontouchstart="handleInput('ArrowDown', event)">▼</div>
+                    <div class="d-btn" onpointerdown="handleInput('ArrowUp', event)">▲</div>
+                    <div class="d-btn" onpointerdown="handleInput('ArrowDown', event)">▼</div>
                 </div>
-                <div class="d-btn" onmousedown="handleInput('ArrowRight')" ontouchstart="handleInput('ArrowRight', event)">►</div>
+                <div class="d-btn" onpointerdown="handleInput('ArrowRight', event)">►</div>
             </div>
             
             <!-- Action Keys -->
-            <button class="key" onmousedown="handleInput('1')" ontouchstart="handleInput('1', event)">1<br><span style="font-size:10px">RESET</span></button>
-            <button class="key" onmousedown="handleInput('2')" ontouchstart="handleInput('2', event)">2<br><span style="font-size:10px">MENU</span></button>
-            <button class="key" onmousedown="handleInput('3')" ontouchstart="handleInput('3', event)">3</button>
+            <button class="key" onpointerdown="handleInput('1', event)">1<br><span style="font-size:10px">RESET</span></button>
+            <button class="key" onpointerdown="handleInput('2', event)">2<br><span style="font-size:10px">MENU</span></button>
+            <button class="key" onpointerdown="handleInput('3', event)">3</button>
         </div>
     </div>
 
     <div class="instruction">
         Di chuyển: Mũi tên / Phím ảo<br>
         Reset: Phím 1 | Menu: Phím 2<br>
-        <span style="color: #ff5555;">Hộp ĐỎ: Bị kẹt (Thua cuộc)</span>
     </div>
 
 <script>
 /**
  * SOKOBAN CUSTOM LEVELS
- * Imported from user's level.txt
- * 30 Levels total
  */
 
 const levelsRaw = [
@@ -343,20 +352,26 @@ const TILE_SIZE = 20;
 const COLORS = {
     bg: '#9bbc0f', wall: '#0f380f', floor: '#9bbc0f',
     goal: '#306230', box: '#8bac0f', boxOnGoal: '#0f380f', player: '#0f380f',
-    boxDead: '#d32f2f' // Màu đỏ cho box chết
+    boxDead: '#d32f2f' 
 };
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playTone(freq, type, duration) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type; osc.frequency.value = freq;
-    gain.gain.value = 0.1;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
-    setTimeout(() => osc.stop(), duration * 1000);
+    if (audioCtx.state === 'suspended') {
+        // Không gọi resume ở đây nữa để tránh delay input
+        // Resume sẽ được xử lý một lần duy nhất trong handleInput
+    }
+    // Chỉ phát âm thanh nếu context đã chạy
+    if (audioCtx.state === 'running') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        gain.gain.value = 0.1;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+        setTimeout(() => osc.stop(), duration * 1000);
+    }
 }
 
 const SFX = {
@@ -370,14 +385,17 @@ const SFX = {
 
 let canvas, ctx, currentLevelIndex = 0, grid = [], player = { x: 0, y: 0 }, steps = 0, isPaused = false, isGameWon = false;
 
+// --- BIẾN MỚI ĐỂ XỬ LÝ INPUT ---
+let lastInputTime = 0;
+const INPUT_COOLDOWN = 100; // 100ms debounce (ngăn nhận lệnh kép)
+
 function init() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
-    // Sử dụng key lưu trữ mới để tránh xung đột với map cũ
+    
     const saved = localStorage.getItem('nokia_sokoban_custom_lvl');
     if (saved) {
         const parsed = parseInt(saved);
-        // Đảm bảo index nằm trong giới hạn của danh sách level mới
         if (parsed >= 0 && parsed < levelsRaw.length) {
             currentLevelIndex = parsed;
         } else {
@@ -385,10 +403,6 @@ function init() {
         }
     }
     loadLevel(currentLevelIndex);
-    // Handle resize for responsive canvas
-    window.addEventListener('resize', () => {
-        // Optional: re-center or adjust logic if needed
-    });
     render(); 
 }
 
@@ -429,16 +443,12 @@ function checkWin() {
     return true;
 }
 
-// --- Deadlock Detection Code (Logic mới) ---
 function isWall(x, y) {
-    // Kiểm tra xem tọa độ có phải tường không
-    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) return true; // Ngoài biên coi như tường
+    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) return true; 
     return grid[y][x] === '#';
 }
 
 function isCornerDeadlock(x, y) {
-    // Hộp ($) đang ở (x,y). Nó không phải là đích (vì gọi hàm này cho $)
-    
     const wU = isWall(x, y - 1);
     const wD = isWall(x, y + 1);
     const wL = isWall(x - 1, y);
@@ -451,7 +461,6 @@ function isCornerDeadlock(x, y) {
 
     return false;
 }
-// -------------------------------------------
 
 function move(dx, dy) {
     if(isPaused || isGameWon) return;
@@ -476,7 +485,7 @@ function move(dx, dy) {
     
     if(checkWin()) {
         isGameWon = true; SFX.win();
-        document.getElementById('msg-area').innerText = `HOAN THANH ${currentLevelIndex + 1}!`;
+        document.getElementById('msg-area').innerText = `HOAN THANH LEVEL ${currentLevelIndex + 1}!`;
         document.getElementById('msg-area').style.display = 'block';
         setTimeout(() => loadLevel(currentLevelIndex + 1), 2000);
     }
@@ -488,13 +497,26 @@ function togglePause() {
     document.getElementById('pause-menu').style.display = isPaused ? 'flex' : 'none';
 }
 
-// Xử lý input cho cả chuột và cảm ứng
+// --- HÀM XỬ LÝ INPUT ĐÃ TỐI ƯU ---
 function handleInput(k, e) {
     if (e) {
-        e.preventDefault(); // Ngăn hành động mặc định như click chuột lần 2, zoom
+        // Ngăn hành động mặc định (scroll, zoom, mouse emulation)
+        e.preventDefault();
+        e.stopPropagation();
     }
     
-    if(audioCtx.state === 'suspended') audioCtx.resume();
+    // 1. Kích hoạt âm thanh một lần duy nhất (User Interaction Requirement)
+    if(audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    // 2. Kiểm tra Cooldown (Ngăn Double Click/Ghost Click)
+    const now = Date.now();
+    if (now - lastInputTime < INPUT_COOLDOWN) {
+        return; // Bỏ qua nếu ấn quá nhanh (dưới 100ms)
+    }
+    lastInputTime = now;
+
     if(k === '1') return resetLevel();
     if(k === '2') return togglePause();
     
@@ -510,6 +532,7 @@ function handleInput(k, e) {
     if(k==='ArrowRight') move(1,0);
 }
 
+// Keyboard Listener
 document.addEventListener('keydown', e => {
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
     let k = e.code;
@@ -518,7 +541,6 @@ document.addEventListener('keydown', e => {
 });
 
 function drawTile(x, y, c, s=false) {
-    // Tự động tính toán lại scale nếu màn hình thay đổi
     let ox = Math.floor((canvas.width - grid[0].length * TILE_SIZE) / 2);
     let oy = Math.floor((canvas.height - grid.length * TILE_SIZE) / 2);
     
@@ -545,18 +567,13 @@ function render() {
                 drawTile(x, y, COLORS.goal, true);
                 ctx.fillStyle = COLORS.goal; ctx.fillRect(dx+8, dy+8, 4, 4);
             } else if(c === '$') {
-                // Kiểm tra xem hộp này có bị kẹt chết không
                 const dead = isCornerDeadlock(x, y);
                 const boxColor = dead ? COLORS.boxDead : COLORS.box;
-
                 drawTile(x, y, boxColor, false);
-                
-                // Vẽ X hoặc viền
                 ctx.strokeStyle = COLORS.boxOnGoal; ctx.lineWidth = 2;
                 ctx.strokeRect(dx+2, dy+2, 16, 16);
                 ctx.beginPath(); ctx.moveTo(dx+4, dy+4); ctx.lineTo(dx+16, dy+16);
                 ctx.moveTo(dx+16, dy+4); ctx.lineTo(dx+4, dy+16); ctx.stroke();
-
             } else if(c === '*') {
                 drawTile(x, y, COLORS.boxOnGoal);
                 ctx.fillStyle = COLORS.bg; ctx.fillRect(dx+6, dy+6, 8, 8);
