@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nokia Sokoban Mobile Optimized</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --bg-color: #9bbc0f;
+            --fg-color: #0f380f;
+            --screen-width: 240px;
+            --screen-height: 320px;
+            --dead-color: #d32f2f;
+        }
+
+        body {
+            background-color: #202020;
+            color: var(--fg-color);
+            font-family: 'VT323', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            /* Ngăn cuộn trang trên mobile khi kéo thả */
+            overscroll-behavior: none;
+        }
+
+        /* Phone Case Simulation */
+        #phone-case {
+            background-color: #333;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,255,255,0.1);
+            border: 4px solid #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Giới hạn chiều rộng tối đa để không quá to trên Tablet */
+            max-width: 95vw; 
+            box-sizing: border-box;
+        }
+
+        #nokia-logo {
+            color: #ccc;
+            font-weight: bold;
+            font-family: sans-serif;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+        /* Screen */
+        #screen-container {
+            width: var(--screen-width);
+            height: var(--screen-height);
+            background-color: var(--bg-color);
+            border: 4px solid #555;
+            border-radius: 5px;
+            position: relative;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);
+            image-rendering: pixelated;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .status-bar {
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(155, 188, 15, 0.8);
+            padding: 0 4px;
+        }
+
+        #msg-area {
+            text-align: center;
+            margin-top: auto;
+            padding-bottom: 20px;
+            font-size: 24px;
+            display: none;
+            text-shadow: 2px 2px 0px var(--bg-color);
+            background: rgba(155, 188, 15, 0.95);
+            border-top: 2px solid var(--fg-color);
+            border-bottom: 2px solid var(--fg-color);
+            color: var(--fg-color);
+            font-weight: bold;
+        }
+
+        #pause-menu {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 56, 15, 0.95);
+            color: var(--bg-color);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #pause-menu h2 { margin: 0 0 20px 0; font-size: 30px; border-bottom: 2px solid var(--bg-color); }
+        #pause-menu p { font-size: 20px; margin: 10px 0; cursor: pointer; }
+        #pause-menu p:hover { text-decoration: underline; }
+
+        /* Keypad Simulation */
+        #keypad {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px; /* Tăng khoảng cách nút */
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .key {
+            background: #444; color: white; border: none; border-radius: 10px;
+            padding: 0; /* Xóa padding để canh giữa text dễ hơn */
+            font-family: sans-serif; font-size: 16px; font-weight: bold;
+            box-shadow: 0 4px 0 #222; cursor: pointer; text-align: center;
+            height: 50px; /* Cao hơn để dễ bấm */
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            touch-action: manipulation; /* Tối ưu cảm ứng */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .key:active { transform: translateY(4px); box-shadow: 0 0 0 #222; background: #333; }
+
+        .d-pad-area {
+            grid-column: 1 / span 3;
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 5px; gap: 8px;
+        }
+
+        .d-btn {
+            width: 60px; height: 50px; /* Nút điều hướng to hơn */
+            background: #555; border-radius: 8px;
+            color: white; font-size: 24px; 
+            display: flex; justify-content: center;
+            align-items: center; 
+            box-shadow: 0 4px 0 #333; 
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .d-btn:active { transform: translateY(4px); box-shadow: none; background: #444; }
+
+        .instruction { margin-top: 10px; color: #666; font-size: 14px; text-align: center; max-width: 300px; }
+        .scanlines {
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
+            background-size: 100% 4px;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 5;
+        }
+
+        /* Mobile Optimization Specifics */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px 0;
+                justify-content: center; /* Canh giữa theo chiều dọc */
+            }
+            
+            #phone-case {
+                padding: 15px 10px;
+                border-width: 2px; /* Giảm độ dày viền */
+                width: 98%;
+            }
+
+            #nokia-logo {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+
+            /* Thu nhỏ màn hình game một chút nếu điện thoại quá nhỏ */
+            #screen-container {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 240/320;
+            }
+
+            #keypad {
+                margin-top: 10px;
+                gap: 8px;
+            }
+
+            .d-btn {
+                width: 55px; /* Điều chỉnh cho vừa chiều ngang */
+                height: 55px; /* Tăng chiều cao để dễ bấm */
+                font-size: 28px;
+            }
+
+            .key {
+                height: 55px;
+                font-size: 18px;
+            }
+            
+            /* Ẩn hướng dẫn nếu màn hình quá ngắn */
+            @media (max-height: 650px) {
+                .instruction { display: none; }
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="phone-case">
+        <div id="nokia-logo">NOKIA</div>
+        <div id="screen-container">
+            <canvas id="gameCanvas" width="240" height="320"></canvas>
+            <div class="scanlines"></div>
+            <div id="ui-layer">
+                <div class="status-bar">
+                    <span id="level-display">LVL 01</span>
+                    <span id="steps-display">000</span>
+                </div>
+                <div id="msg-area">LEVEL CLEAR!</div>
+            </div>
+            <div id="pause-menu">
+                <h2>MENU</h2>
+                <p onclick="togglePause()">QUAY LAI (2)</p>
+                <p onclick="resetLevel()">CHOI LAI (1)</p>
+                <div style="margin-top:10px; font-size: 16px;">Dung mui ten trai/phai<br>de chon man</div>
+            </div>
+        </div>
+
+        <div id="keypad">
+            <!-- D-Pad Layout optimized for thumbs -->
+            <div class="d-pad-area">
+                <div class="d-btn" onmousedown="handleInput('ArrowLeft')" ontouchstart="handleInput('ArrowLeft', event)">◄</div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="d-btn" onmousedown="handleInput('ArrowUp')" ontouchstart="handleInput('ArrowUp', event)">▲</div>
+                    <div class="d-btn" onmousedown="handleInput('ArrowDown')" ontouchstart="handleInput('ArrowDown', event)">▼</div>
+                </div>
+                <div class="d-btn" onmousedown="handleInput('ArrowRight')" ontouchstart="handleInput('ArrowRight', event)">►</div>
+            </div>
+            
+            <!-- Action Keys -->
+            <button class="key" onmousedown="handleInput('1')" ontouchstart="handleInput('1', event)">1<br><span style="font-size:10px">RESET</span></button>
+            <button class="key" onmousedown="handleInput('2')" ontouchstart="handleInput('2', event)">2<br><span style="font-size:10px">MENU</span></button>
+            <button class="key" onmousedown="handleInput('3')" ontouchstart="handleInput('3', event)">3</button>
+        </div>
+    </div>
+
+    <div class="instruction">
+        Di chuyển: Mũi tên / Phím ảo<br>
+        Reset: Phím 1 | Menu: Phím 2<br>
+        <span style="color: #ff5555;">Hộp ĐỎ: Bị kẹt (Thua cuộc)</span>
+    </div>
+
+<script>
+/**
+ * SOKOBAN CUSTOM LEVELS
+ * Imported from user's level.txt
+ * 30 Levels total
+ */
+
+const levelsRaw = [
+    // Level 1
+    ["########", "###  . #", "## * # #", "## .$  #", "##  #$##", "### @ ##", "########", "########"],
+    // Level 2
+    ["########", "##  .@ #", "## #.# #", "##   $ #", "##.$$ ##", "##  ####", "########", "########"],
+    // Level 3
+    ["########", "#### @##", "#  *$ ##", "#      #", "## .####", "##$ ####", "## .####", "########"],
+    // Level 4
+    ["########", "##.###.#", "## #  .#", "## $$ @#", "##  $  #", "##  #  #", "##  ####", "########"],
+    // Level 5
+    ["########", "#### @##", "####   #", "#. #$$ #", "#      #", "#.  $###", "##.  ###", "########"],
+    // Level 6
+    ["########", "# ..####", "# $    #", "#  #$# #", "# @ .$ #", "########", "########", "########"],
+    // Level 7
+    ["########", "###  .##", "# $ # ##", "# *$   #", "# .#@ ##", "#    ###", "#   ####", "########"],
+    // Level 8
+    ["########", "########", "#.  @.##", "#  $# ##", "# # $. #", "#   $# #", "####   #", "########"],
+    // Level 9
+    ["########", "#. .####", "#.#$$ ##", "#   @ ##", "# $#  ##", "##   ###", "########", "########"],
+    // Level 10
+    ["########", "#.  ####", "# #   ##", "# . # ##", "# $* $ ##", "##@ ####", "##  ####", "########"],
+    // Level 11
+    ["########", "########", "#.   . #", "# # #  #", "#@$  $.#", "##### $#", "#####  #", "########"],
+    // Level 12
+    ["########", "#  #####", "#  #####", "# .* #", "##$    #", "## #$###", "##. @###", "########"],
+    // Level 13
+    ["########", "## @ ###", "## .   #", "#. $.$ #", "##$# ###", "##   ###", "########", "########"],
+    // Level 14
+    ["########", "##   ###", "# $# ###", "# . @###", "# * ##", "## #$ ##", "##.  ###", "########"],
+    // Level 15
+    ["########", "########", "##  ####", "#..$  .#", "# #$ $ #", "#@  #  #", "#####  #", "########"],
+    // Level 16
+    ["########", "##  .@##", "##   $.#", "####*# #", "##     #", "#  $  ##", "#   ####", "########"],
+    // Level 17
+    ["########", "##@ ####", "##  ####", "##. ####", "# $$ . #", "#  $ ###", "###  ###", "########"],
+    // Level 18
+    ["########", "########", "##.  ###", "## # ###", "## *$  #", "##  $. #", "##  @###", "########"],
+    // Level 19
+    ["########", "########", "###   ##", "### #.##", "### . ##", "#@ $$ ##", "#  .$ ##", "########"],
+    // Level 20
+    ["########", "#   @###", "# $# ###", "# * $  #", "#   ## #", "##.  . #", "###   ##", "########"],
+    // Level 21
+    ["########", "##   @##", "##  #  #", "##.  $ #", "## $$#.#", "####  .#", "########", "########"],
+    // Level 22
+    ["########", "########", "###. ###", "# .  ###", "#   $$ #", "## . $@#", "########", "########"],
+    // Level 23
+    ["########", "##@.  ##", "# $$* ##", "#  #  ##", "#  #  .#", "#### # #", "####   #", "########"],
+    // Level 24
+    ["########", "#####  #", "#####$.#", "###  . #", "###  #.#", "# $  $ #", "#   #@ #", "########"],
+    // Level 25
+    ["########", "##  ####", "##  ####", "### .. #", "#  $#  #", "#  .$$ #", "#### @ #", "########"],
+    // Level 26
+    ["########", "#   ####", "# # *@##", "#  * #", "###$   #", "###   .#", "########", "########"],
+    // Level 27
+    ["########", "### .  #", "# $@#. #", "#  $# ##", "#  * ##", "##  # ##", "###   ##", "########"],
+    // Level 28
+    ["########", "########", "########", "##  ####", "#      #", "#  #$$@#", "#  . *.#", "########"],
+    // Level 29
+    ["########", "##@    #", "#. #   #", "# $$$ .#", "# .#   #", "#  #####", "########", "########"],
+    // Level 30
+    ["########", "#  .####", "# $.. ##", "#  ##$##", "##  #  #", "##$   @#", "##  ####", "########"]
+];
+
+const TILE_SIZE = 20;
+const COLORS = {
+    bg: '#9bbc0f', wall: '#0f380f', floor: '#9bbc0f',
+    goal: '#306230', box: '#8bac0f', boxOnGoal: '#0f380f', player: '#0f380f',
+    boxDead: '#d32f2f' // Màu đỏ cho box chết
+};
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, type, duration) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.value = 0.1;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+    setTimeout(() => osc.stop(), duration * 1000);
+}
+
+const SFX = {
+    move: () => playTone(150, 'square', 0.05),
+    push: () => playTone(100, 'sawtooth', 0.1),
+    goal: () => { playTone(880, 'square', 0.1); setTimeout(() => playTone(1760, 'square', 0.2), 100); },
+    win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.2), i * 150)),
+    reset: () => playTone(100, 'sawtooth', 0.3),
+    wall: () => playTone(60, 'square', 0.05)
+};
+
+let canvas, ctx, currentLevelIndex = 0, grid = [], player = { x: 0, y: 0 }, steps = 0, isPaused = false, isGameWon = false;
+
+function init() {
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    // Sử dụng key lưu trữ mới để tránh xung đột với map cũ
+    const saved = localStorage.getItem('nokia_sokoban_custom_lvl');
+    if (saved) {
+        const parsed = parseInt(saved);
+        // Đảm bảo index nằm trong giới hạn của danh sách level mới
+        if (parsed >= 0 && parsed < levelsRaw.length) {
+            currentLevelIndex = parsed;
+        } else {
+            currentLevelIndex = 0;
+        }
+    }
+    loadLevel(currentLevelIndex);
+    // Handle resize for responsive canvas
+    window.addEventListener('resize', () => {
+        // Optional: re-center or adjust logic if needed
+    });
+    render(); 
+}
+
+function parseLevel(data) {
+    let h = data.length, w = 0;
+    data.forEach(r => w = Math.max(w, r.length));
+    let g = [], p = {x:0, y:0};
+    for(let y=0; y<h; y++) {
+        let row = [];
+        for(let x=0; x<w; x++) {
+            let c = (x < data[y].length) ? data[y][x] : ' ';
+            if(c === '@' || c === '+') { p = {x, y}; c = (c === '+') ? '.' : ' '; }
+            row.push(c);
+        }
+        g.push(row);
+    }
+    return { grid: g, player: p };
+}
+
+function loadLevel(idx) {
+    if(idx < 0) idx = 0; if(idx >= levelsRaw.length) idx = 0;
+    currentLevelIndex = idx;
+    const d = parseLevel(levelsRaw[idx]);
+    grid = d.grid; player = d.player;
+    steps = 0; isPaused = false; isGameWon = false;
+    
+    document.getElementById('level-display').innerText = `LVL ${String(idx + 1).padStart(2, '0')}`;
+    document.getElementById('steps-display').innerText = '000';
+    document.getElementById('msg-area').style.display = 'none';
+    document.getElementById('pause-menu').style.display = 'none';
+    localStorage.setItem('nokia_sokoban_custom_lvl', idx);
+}
+
+function checkWin() {
+    for(let y=0; y<grid.length; y++) 
+        for(let x=0; x<grid[y].length; x++) 
+            if(grid[y][x] === '$') return false;
+    return true;
+}
+
+// --- Deadlock Detection Code (Logic mới) ---
+function isWall(x, y) {
+    // Kiểm tra xem tọa độ có phải tường không
+    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) return true; // Ngoài biên coi như tường
+    return grid[y][x] === '#';
+}
+
+function isCornerDeadlock(x, y) {
+    // Hộp ($) đang ở (x,y). Nó không phải là đích (vì gọi hàm này cho $)
+    
+    const wU = isWall(x, y - 1);
+    const wD = isWall(x, y + 1);
+    const wL = isWall(x - 1, y);
+    const wR = isWall(x + 1, y);
+
+    if (wU && wL) return true;
+    if (wU && wR) return true;
+    if (wD && wL) return true;
+    if (wD && wR) return true;
+
+    return false;
+}
+// -------------------------------------------
+
+function move(dx, dy) {
+    if(isPaused || isGameWon) return;
+    let nx = player.x + dx, ny = player.y + dy;
+    let tc = grid[ny][nx];
+    
+    if(tc === '#') { SFX.wall(); return; }
+    
+    if(tc === '$' || tc === '*') {
+        let bx = nx + dx, by = ny + dy;
+        let bc = grid[by][bx];
+        if(bc === '#' || bc === '$' || bc === '*') { SFX.wall(); return; }
+        grid[by][bx] = (bc === '.') ? '*' : '$';
+        grid[ny][nx] = (tc === '*') ? '.' : ' ';
+        SFX.push();
+        if(grid[by][bx] === '*') SFX.goal();
+    } else { SFX.move(); }
+    
+    player.x = nx; player.y = ny;
+    steps++;
+    document.getElementById('steps-display').innerText = String(steps).padStart(3, '0');
+    
+    if(checkWin()) {
+        isGameWon = true; SFX.win();
+        document.getElementById('msg-area').innerText = `HOAN THANH ${currentLevelIndex + 1}!`;
+        document.getElementById('msg-area').style.display = 'block';
+        setTimeout(() => loadLevel(currentLevelIndex + 1), 2000);
+    }
+}
+
+function resetLevel() { SFX.reset(); loadLevel(currentLevelIndex); }
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pause-menu').style.display = isPaused ? 'flex' : 'none';
+}
+
+// Xử lý input cho cả chuột và cảm ứng
+function handleInput(k, e) {
+    if (e) {
+        e.preventDefault(); // Ngăn hành động mặc định như click chuột lần 2, zoom
+    }
+    
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    if(k === '1') return resetLevel();
+    if(k === '2') return togglePause();
+    
+    if(isPaused) {
+        if(k === 'ArrowRight') loadLevel(currentLevelIndex + 1);
+        if(k === 'ArrowLeft') loadLevel(currentLevelIndex - 1);
+        return;
+    }
+    
+    if(k==='ArrowUp') move(0,-1);
+    if(k==='ArrowDown') move(0,1);
+    if(k==='ArrowLeft') move(-1,0);
+    if(k==='ArrowRight') move(1,0);
+}
+
+document.addEventListener('keydown', e => {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+    let k = e.code;
+    if(e.key === '1') k = '1'; if(e.key === '2') k = '2';
+    handleInput(k);
+});
+
+function drawTile(x, y, c, s=false) {
+    // Tự động tính toán lại scale nếu màn hình thay đổi
+    let ox = Math.floor((canvas.width - grid[0].length * TILE_SIZE) / 2);
+    let oy = Math.floor((canvas.height - grid.length * TILE_SIZE) / 2);
+    
+    let dx = ox + x * TILE_SIZE, dy = oy + y * TILE_SIZE;
+    ctx.fillStyle = c;
+    if(s) {
+        ctx.strokeStyle = c; ctx.lineWidth = 2;
+        ctx.strokeRect(dx+2, dy+2, TILE_SIZE-4, TILE_SIZE-4);
+    } else ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE);
+}
+
+function render() {
+    ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let ox = Math.floor((canvas.width - grid[0].length * TILE_SIZE) / 2);
+    let oy = Math.floor((canvas.height - grid.length * TILE_SIZE) / 2);
+
+    for(let y=0; y<grid.length; y++) {
+        for(let x=0; x<grid[y].length; x++) {
+            let c = grid[y][x], dx = ox + x * TILE_SIZE, dy = oy + y * TILE_SIZE;
+            if(c === '#') {
+                drawTile(x, y, COLORS.wall);
+                ctx.fillStyle = '#000'; ctx.fillRect(dx+4, dy+4, 4, 4);
+            } else if(c === '.') {
+                drawTile(x, y, COLORS.goal, true);
+                ctx.fillStyle = COLORS.goal; ctx.fillRect(dx+8, dy+8, 4, 4);
+            } else if(c === '$') {
+                // Kiểm tra xem hộp này có bị kẹt chết không
+                const dead = isCornerDeadlock(x, y);
+                const boxColor = dead ? COLORS.boxDead : COLORS.box;
+
+                drawTile(x, y, boxColor, false);
+                
+                // Vẽ X hoặc viền
+                ctx.strokeStyle = COLORS.boxOnGoal; ctx.lineWidth = 2;
+                ctx.strokeRect(dx+2, dy+2, 16, 16);
+                ctx.beginPath(); ctx.moveTo(dx+4, dy+4); ctx.lineTo(dx+16, dy+16);
+                ctx.moveTo(dx+16, dy+4); ctx.lineTo(dx+4, dy+16); ctx.stroke();
+
+            } else if(c === '*') {
+                drawTile(x, y, COLORS.boxOnGoal);
+                ctx.fillStyle = COLORS.bg; ctx.fillRect(dx+6, dy+6, 8, 8);
+            }
+        }
+    }
+    
+    let px = ox + player.x * TILE_SIZE, py = oy + player.y * TILE_SIZE;
+    ctx.fillStyle = COLORS.player;
+    ctx.fillRect(px+6, py+2, 8, 6); ctx.fillRect(px+4, py+8, 12, 8);
+    ctx.fillRect(px+4, py+16, 4, 4); ctx.fillRect(px+12, py+16, 4, 4);
+    
+    requestAnimationFrame(render);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
